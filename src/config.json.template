@@ -1,0 +1,20 @@
+{
+	"youtube": {
+		"apiKey": "xxx",
+		"channels": [
+			{
+				"id": "xxx",
+				"name": "xxx"
+			}
+		],
+		"checkIntervalMilliseconds": 30000
+	},
+	"irc": {
+		"channel": "#channel",
+		"network": {
+			"host": "irc.network.net",
+			"port": 6667,
+			"nick": "StreamBot"
+		}
+	}
+}
