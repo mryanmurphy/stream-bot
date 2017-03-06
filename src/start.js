@@ -13,6 +13,9 @@ config.configFile(process.argv[2], function (config) {
 		channel = xbot.channel(config.irc.channel),
 		joined = false,
 		channelActiveStreams = {},
+		// Track finished streams, youtube API has shown videos go from 
+		// live to finished and back a few times after completion
+		finishedStreams = [], 
 		checkYoutube = function(channelData) {
 			if (!joined) return false;
 
@@ -41,18 +44,12 @@ config.configFile(process.argv[2], function (config) {
 					if (data.pageInfo.totalResults) {
 						data.items.forEach(i => {
 							let id = i.id.videoId;
-							if (!announced.includes(id)) {
-								jack.log(`Added stream ${id}`);
-								announced.push(id);
-								channel.say(`${nick} is streaming @ ${youtubeVideoUrl}${id}`);
-							}
+							announceStart(id, nick, announced, finishedStreams);
 						});
-						// announced should be fully updated, so anything now there but not in data.items can be removed
+						// announced should be fully updated, so anything there but not in data.items can be removed
 						announced = announced.filter(id => {
 							if (data.items.findIndex(element => element.id.videoId === id) < 0) {
-								// Announce end and remove from array
-								jack.log(`Removed stream ${id}`);
-								channel.say(`${nick} has finished streaming @ ${youtubeVideoUrl}${id}`);
+								announceEnd(id, nick, finishedStreams);
 								return false;
 							}
 							// Keep in array
@@ -61,12 +58,27 @@ config.configFile(process.argv[2], function (config) {
 					} else {
 						while (announced.length) {
 							let id = announced.pop();
-							jack.log(`Removed stream ${id}`);
-							channel.say(`${nick} has finished streaming @ ${youtubeVideoUrl}${id}`);
+							announceEnd(id, nick, finishedStreams);
 						}
 					}
 				});
 			});
+		},
+		announceStart = function(id, nick, active, finished) {
+			if (finished.includes(id)) jack.log(`Youtube thought ${id} was back`);
+			else if (!active.includes(id)) {
+				jack.log(`Added stream ${id}`);
+				active.push(id);
+				channel.say(`${nick} is streaming @ ${youtubeVideoUrl}${id}`);
+			}
+		},
+		announceEnd = function(id, nick, finished) {
+			jack.log(`Removed stream ${id}`);
+			if (finished.includes(id)) jack.log(`Youtube thought ${id} was back`);
+			else {
+				finished.push(id);
+				channel.say(`${nick} has finished streaming @ ${youtubeVideoUrl}${id}`);
+			}
 		};
 
 	xbot.connect({
