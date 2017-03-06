@@ -1,0 +1,7 @@
+{
+	"name": "stream-bot",
+	"version": "2017.3.5",
+	"dependencies": {
+		"irc-framework": "latest"
+	}
+}
