@@ -92,14 +92,30 @@ config.configFile(process.argv[2], function (config) {
 		channel.say('hello');
 		joined = true;
 	});
+	
+	xbot.matchMessage(/^!stream/, (d) => {
+		jack.log(JSON.stringify(d));
+		let any = false;
+		config.youtube.channels.forEach(c => {
+			if (channelActiveStreams[c.id] && channelActiveStreams[c.id].length) {
+				any = true;
+				let url = youtubeVideoUrl + channelActiveStreams[c.id].join(', ' + youtubeVideoUrl);
+				channel.say(`${c.name} is streaming @ ${url}`);
+			}
+		});
+
+		if (!any) {
+			channel.say('No active streams');
+		}
+	});
 
 	var timeoutID = setInterval(function () {
 		// Keep irc alive
 		xbot.ping();
 
 		// Send youtube request for each channel
-		config.youtube.channels.forEach(channel => {
-			checkYoutube(channel);
+		config.youtube.channels.forEach(c => {
+			checkYoutube(c);
 		});
 	}, config.youtube.checkIntervalMilliseconds);
 });
