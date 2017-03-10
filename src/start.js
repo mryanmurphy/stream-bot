@@ -79,6 +79,15 @@ config.configFile(process.argv[2], function (config) {
 				finished.push(id);
 				channel.say(`${nick} has finished streaming @ ${youtubeVideoUrl}${id}`);
 			}
+		},
+		err = function(e) {
+			jack.log(e);
+		},
+		// FF only
+		comic = {
+			promise: new Date(2009, 5, 13, 3, 9, 0, 0),
+			deadline: new Date(2009, 6, 5, 22, 0, 0, 0),
+			manMan: new Date(2009, 2, 13, 0, 0, 0, 0)
 		};
 
 	xbot.connect({
@@ -94,28 +103,53 @@ config.configFile(process.argv[2], function (config) {
 	});
 	
 	xbot.matchMessage(/^!stream/, (d) => {
-		jack.log(JSON.stringify(d));
-		let any = false;
-		config.youtube.channels.forEach(c => {
-			if (channelActiveStreams[c.id] && channelActiveStreams[c.id].length) {
-				any = true;
-				let url = youtubeVideoUrl + channelActiveStreams[c.id].join(', ' + youtubeVideoUrl);
-				channel.say(`${c.name} is streaming @ ${url}`);
-			}
-		});
+		try {
+			jack.log(JSON.stringify(d));
+			let any = false;
+			config.youtube.channels.forEach(c => {
+				if (channelActiveStreams[c.id] && channelActiveStreams[c.id].length) {
+					any = true;
+					let url = youtubeVideoUrl + channelActiveStreams[c.id].join(', ' + youtubeVideoUrl);
+					channel.say(`${c.name} is streaming @ ${url}`);
+				}
+			});
 
-		if (!any) {
-			channel.say('No active streams');
+			if (!any) {
+				channel.say('No active streams');
+			}
+		} catch (error) {
+			err(error);
 		}
 	});
 
-	var timeoutID = setInterval(function () {
-		// Keep irc alive
-		xbot.ping();
+	xbot.matchMessage(/^(comic|man[-\s]?man)$/i, (d) => {
+		var diff = (since) => {
+			return Math.floor((Date.now() - since) / 86400000);
+		};
 
-		// Send youtube request for each channel
-		config.youtube.channels.forEach(c => {
-			checkYoutube(c);
-		});
-	}, config.youtube.checkIntervalMilliseconds);
+		try {
+			jack.log(JSON.stringify(d));
+			let say = /comic/i.test(d.message) ? 
+				`It's been ${diff(comic.deadline)} days since the original comic deadline, ${comic.deadline.toDateString()}, promised on ${comic.promise.toDateString()}.`
+				: `It's been ${diff(comic.manMan)} days since the Spyder started his man-man comic, ${comic.manMan.toDateString()}.`;
+			
+			channel.say(say);
+		} catch (error) {
+			err(error);
+		}
+	});
+
+	var intervalCounter = 0,
+		channelCount = config.youtube.channels.length,
+		timeoutID = setInterval(function () {
+			try {
+				// Keep irc alive
+				xbot.ping();
+
+				// Check one channel per interval
+				checkYoutube(config.youtube.channels[intervalCounter++ % channelCount]);
+			} catch (error) {
+				err(error);
+			}
+		}, config.youtube.checkIntervalMilliseconds);
 });
